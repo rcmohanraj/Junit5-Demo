@@ -13,6 +13,18 @@ Junit is basically a testing framework for Java which requires Java 8.
 3) @BeforeEach
 4) @AfterEach
 
+To trigger test cases during maven lift cycle we need to add below plugin.  
+```
+<build>  
+    <plugins>  
+        <plugin>  
+            <artifactId>maven-surefire-plugin</artifactId>  
+            <version>3.0.0-M5</version>  
+        </plugin>  
+    </plugins>  
+</build>
+```  
+
 In our example we are writing test case for our MathUtil.java in the 
 MathUtilTest.java under the package src/test/java
 
@@ -68,7 +80,7 @@ can be successful.
 **@Nested:**  
 This annotation is used to group multiple test methods for one single functionality. 
 It can be applied only on class level. So we need to group multiple test methods under 
-a class and assign @Nested for that newly created(DivideTest.java) class. 
+a class and assign @Nested for that newly created DivideTest class. 
 
 **Conditional executions:**  
 It have list of @Enable annotations, where the test methods will run only on specific
@@ -78,12 +90,101 @@ conditions.
 @EnabledIfEnvironmentVariable()  
 @EnabledIfSystemProperty()  
 
-**Asserts:**  
-We can do assert in each test method to arrive a test result.
-assertEquals(expected, result, "message of failure");  
+**Assertions:**  
+We can do assert in each test method to arrive a test result as success or failure.
+Assert statements will compare against expected and actual value to find the result.
+Also we can able to pass lambda for the 3rd param in assertEquals method. When the 
+test case results in failure, the lambda will be called and message will be displayed 
+in the test console. If we directly give the message, still we get the message in the 
+case of failure. But the string manipulation will happen even if the test cases succeed
+which is not required. (this is called Lazy Assert Message)   
+```
+assertEquals(expected, result, "message of failure"); //we can pass lambda instead of hard code message  
 assertFalse(false);  
 assertTrue(true);  
-assertThrows(): for checking exception from the actual method.  
+assertThrows();//for checking exception from the actual method.  
 assertThrows(ClassType, labmda, "test case description");  
 assertThrows(ArithmeticException.class, () -> mathUtil.divide(5, 0), "The divide method should divide two numbers");  
+fail("Exception case); //to make the test case explicitly
+```
+**assertAll:**  
+This method is used to take bunch of assert statements and run together and
+display fail in case of any one assert failed. It will display success when
+all the asserts are true. It will accept list of lambda functions as parameter.
 
+**Assumptions:**  
+Assumption is set of method where we can pass boolean value, based on that value
+the junit engine will decide to run or skip the test.
+assumeTrue(value);
+For example if our method have connection to DB or server, in the case if the 
+external system is not available our test case might run into failure. To 
+avoid this type of test case failure because of external server we can use
+assumptions. I'm asssuming that the DB connection is up, so that it can proceed for 
+actual assertion test case to decide success or failure. If DB is down, this test
+case will be skipped.
+```
+boolean isDBRunning = false;
+assumeTrue(isDBRunning);//this should skip the test case as DB is down
+``` 
+
+**RepeatedTest:**  
+This is used to repeat the test for n number of times. Instead of using @Test,
+we need to simply use @RepeatedTest(3), it will run the test method 3 times.
+We can also get the current repetition as param in the test method by using
+RepetitionInfo. 
+In RepetitionInfo class we have two methods, 
+1.getCurrentRepetition()  
+2.getCurrentRepetition()  
+
+**Tag:**
+ The @Tag is used to filter the cases by specific group or functionality. We
+ can specify the required tags, while running test cases, either by configuring
+ in IDE or maven. In maven we have to setup excludeGroups in the surefire-plugin 
+ like below. Here we can add any number of tags to skip by separating using comma.
+   
+ ```
+     <build>
+         <plugins>
+             <plugin>
+                 <artifactId>maven-surefire-plugin</artifactId>
+                 <version>3.0.0-M5</version>
+                 <configuration>
+                     <excludedGroups>
+                         Circle, Math
+                     </excludedGroups>
+                 </configuration>
+             </plugin>
+         </plugins>
+     </build>
+```
+ 
+ In IDE we can configure in the Run configuration of Junit like
+ 1) Edit Run Configuration 
+ 2) Choose Test Kind as Tags 
+ 3) Enter the tag name (Math)   
+ if we click run it will run all the tags with name Math.
+ 
+ **TestInfo and TestReporter:**
+ Junit providing these two interfaces for getting to know the details about 
+ test info and test reports. Junit doing dependency injection to add 
+ implementation for these two interfaces. @BeforeAll method we can inject these
+ two interfaces.
+ 
+ TestInfo basically will give DisplayName, Tags and other meta info about each test methods
+ TestReporter basically will give the Timestamp when the test started.
+ ```
+ @BeforeEach
+ void init(TestInfo testInfo, TestReporter testReporter) {
+     this.testInfo = testInfo;
+     this.testReporter = testReporter;
+     mathUtil = new MathUtil();
+     testReporter.publishEntry("Running "+testInfo.getDisplayName() + " with Tags "+testInfo.getTags());
+ }
+ Output: 
+ timestamp = 2020-07-16T11:07:07.096, value = Running Adding two valid number's with Tags [Math]
+ ```
+ 
+ We can do our own provider implementation and Junit can do dependency injection 
+ on the provider whenever we request. (concept to be explored) 
+
+------------------------------------------------------------------------------------------------------------------------ 
